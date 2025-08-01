@@ -31,24 +31,19 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_
 model = RandomForestClassifier(n_estimators=100, random_state=42)
 model.fit(X_train, y_train)
 
-# --- Добавление метрик оценки модели ---
 st.subheader("Оценка модели")
 
-# Делаем предсказания для тестовой и тренировочной выборок
 y_train_pred = model.predict(X_train)
 y_test_pred = model.predict(X_test)
 
-# Группа метрик для тестовой выборки
 with st.expander("Метрики на тестовой выборке"):
     st.write("Эти метрики показывают производительность модели на данных, которые она не видела.")
     
-    # Расчет метрик
     test_accuracy = accuracy_score(y_test, y_test_pred)
     test_precision = precision_score(y_test, y_test_pred)
     test_recall = recall_score(y_test, y_test_pred)
     test_f1 = f1_score(y_test, y_test_pred)
     
-    # Отображение метрик в колонках для удобства
     col_acc, col_prec, col_rec, col_f1 = st.columns(4)
     with col_acc:
         st.metric(label="Точность (Accuracy)", value=f"{test_accuracy:.2f}")
@@ -77,7 +72,6 @@ with st.expander("Метрики на тестовой выборке"):
     ax.set_ylabel('Фактический класс')
     st.pyplot(fig)
 
-# Группа метрик для тренировочной выборки
 with st.expander("Метрики на тренировочной выборке (для сравнения)"):
     st.write("Эти метрики показывают производительность модели на данных, на которых она обучалась. Если метрики сильно лучше, чем на тестовой выборке, это может указывать на переобучение.")
     
@@ -109,18 +103,14 @@ with st.expander("Метрики на тренировочной выборке 
     ax_train.set_ylabel('Фактический класс')
     st.pyplot(fig_train)
 
-# --- Раздел для предсказания на основе пользовательского ввода ---
 st.sidebar.header("Предсказание выживаемости")
 
-# Определяем опции вручную, так как исходных колонок 'Pclass' и 'Sex' уже нет
 pclass_options = [1, 2, 3]
 sex_options = ['male', 'female']
 
-# Виджеты для ввода параметров
 pclass_input = st.sidebar.selectbox("Класс билета (Pclass)", pclass_options)
 sex_input = st.sidebar.selectbox("Пол (Sex)", sex_options)
 
-# Используем `float` для слайдеров, чтобы избежать ошибок с типизацией
 age_min, age_max = float(df['Age'].min()), float(df['Age'].max())
 age_mean = float(df['Age'].mean())
 age_input = st.sidebar.slider("Возраст (Age)", age_min, age_max, age_mean)
@@ -133,13 +123,9 @@ familysize_min, familysize_max = float(df['FamilySize'].min()), float(df['Family
 familysize_mean = float(df['FamilySize'].mean())
 familysize_input = st.sidebar.slider("Размер семьи (FamilySize)", familysize_min, familysize_max, familysize_mean)
 
-# Создание DataFrame из пользовательских данных
-# Создаем пустой DataFrame с колонками, на которых обучалась модель
 user_input_df = pd.DataFrame(columns=X_train.columns)
 user_input_df.loc[0] = 0 # Инициализируем строку нулями
 
-# Заполняем DataFrame данными пользователя, учитывая one-hot кодирование
-# Pclass
 if pclass_input == 2:
     if 'Pclass_2' in user_input_df.columns:
         user_input_df['Pclass_2'] = 1
@@ -147,32 +133,26 @@ elif pclass_input == 3:
     if 'Pclass_3' in user_input_df.columns:
         user_input_df['Pclass_3'] = 1
 
-# Sex
 if sex_input == 'male':
     if 'Sex_male' in user_input_df.columns:
         user_input_df['Sex_male'] = 1
 
-# Заполняем числовые колонки
 user_input_df['Age'] = age_input
 user_input_df['Fare'] = fare_input
 user_input_df['FamilySize'] = familysize_input
 
-# Убеждаемся, что все колонки присутствуют и в правильном порядке
 user_input_df = user_input_df.reindex(columns=X_train.columns, fill_value=0)
 
 st.sidebar.subheader("📈 Результат предсказания")
 
-# Предсказание и отображение результата
 prediction = model.predict(user_input_df)[0]
 prediction_proba = model.predict_proba(user_input_df)[0]
 
-# Отображение предсказания
 if prediction == 1:
     st.sidebar.success(f"**Предсказание: Выживет!**")
 else:
     st.sidebar.error(f"**Предсказание: Не выживет.**")
 
-# Отображение вероятностей
 proba_df = pd.DataFrame({
     'Исход': ['Не выжил', 'Выжил'],
     'Вероятность': prediction_proba
