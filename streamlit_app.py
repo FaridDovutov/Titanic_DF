@@ -108,4 +108,75 @@ with st.expander("Метрики на тренировочной выборке 
     ax_train.set_xlabel('Предсказанный класс')
     ax_train.set_ylabel('Фактический класс')
     st.pyplot(fig_train)
-  
+
+# --- Раздел для предсказания на основе пользовательского ввода ---
+st.sidebar.header("Предсказание выживаемости")
+
+# Определяем опции вручную, так как исходных колонок 'Pclass' и 'Sex' уже нет
+pclass_options = [1, 2, 3]
+sex_options = ['male', 'female']
+
+# Виджеты для ввода параметров
+pclass_input = st.sidebar.selectbox("Класс билета (Pclass)", pclass_options)
+sex_input = st.sidebar.selectbox("Пол (Sex)", sex_options)
+
+# Используем `float` для слайдеров, чтобы избежать ошибок с типизацией
+age_min, age_max = float(df['Age'].min()), float(df['Age'].max())
+age_mean = float(df['Age'].mean())
+age_input = st.sidebar.slider("Возраст (Age)", age_min, age_max, age_mean)
+
+fare_min, fare_max = float(df['Fare'].min()), float(df['Fare'].max())
+fare_mean = float(df['Fare'].mean())
+fare_input = st.sidebar.slider("Стоимость билета (Fare)", fare_min, fare_max, fare_mean)
+
+familysize_min, familysize_max = float(df['FamilySize'].min()), float(df['FamilySize'].max())
+familysize_mean = float(df['FamilySize'].mean())
+familysize_input = st.sidebar.slider("Размер семьи (FamilySize)", familysize_min, familysize_max, familysize_mean)
+
+# Создание DataFrame из пользовательских данных
+# Создаем пустой DataFrame с колонками, на которых обучалась модель
+user_input_df = pd.DataFrame(columns=X_train.columns)
+user_input_df.loc[0] = 0 # Инициализируем строку нулями
+
+# Заполняем DataFrame данными пользователя, учитывая one-hot кодирование
+# Pclass
+if pclass_input == 2:
+    if 'Pclass_2' in user_input_df.columns:
+        user_input_df['Pclass_2'] = 1
+elif pclass_input == 3:
+    if 'Pclass_3' in user_input_df.columns:
+        user_input_df['Pclass_3'] = 1
+
+# Sex
+if sex_input == 'male':
+    if 'Sex_male' in user_input_df.columns:
+        user_input_df['Sex_male'] = 1
+
+# Заполняем числовые колонки
+user_input_df['Age'] = age_input
+user_input_df['Fare'] = fare_input
+user_input_df['FamilySize'] = familysize_input
+
+# Убеждаемся, что все колонки присутствуют и в правильном порядке
+user_input_df = user_input_df.reindex(columns=X_train.columns, fill_value=0)
+
+st.sidebar.subheader("📈 Результат предсказания")
+
+# Предсказание и отображение результата
+prediction = model.predict(user_input_df)[0]
+prediction_proba = model.predict_proba(user_input_df)[0]
+
+# Отображение предсказания
+if prediction == 1:
+    st.sidebar.success(f"**Предсказание: Выживет!**")
+else:
+    st.sidebar.error(f"**Предсказание: Не выживет.**")
+
+# Отображение вероятностей
+proba_df = pd.DataFrame({
+    'Исход': ['Не выжил', 'Выжил'],
+    'Вероятность': prediction_proba
+})
+
+st.sidebar.dataframe(proba_df.set_index("Исход"), use_container_width=True)
+
